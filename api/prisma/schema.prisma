@@ -1,0 +1,72 @@
+// This is your Prisma schema file,
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  // binaryTargets = ["native", "linux-musl"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = "postgresql://neondb_owner:npg_CaT6LgGciw0h@ep-little-credit-a1lgh4j4-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+}
+
+model Language {
+  id              Int           @id
+  name            String
+  extension       String
+  Submission      Submission[]
+  compileCommand  String        @default("")
+  executionCommand String       @default("")
+  testCommand     String        @default("")
+}
+
+enum SubmissionStatus {
+  Queued
+  Successful
+  Error
+}
+
+model User {
+  id          String       @id @default(uuid())
+  username    String       @unique
+  email       String       @unique
+  password    String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  submissions Submission[] // One-to-many relation with Submission
+}
+
+model Problem {
+  id          String       @id @default(uuid())
+  title       String
+  description String
+  difficulty  String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  submissions Submission[] // One-to-many relation with Submission
+}
+
+model Submission {
+  id                    String           @id @default(uuid())
+  problemId             String
+  problem               Problem          @relation(fields: [problemId], references: [id])
+  source_code           String
+  mainFuncName          String           @default("main")
+  stdin                 String[]         @default([""])
+  stdout                String           @default("")
+  language_id           Int
+  language              Language         @relation(fields: [language_id], references: [id])
+  userId                String
+  user                  User             @relation(fields: [userId], references: [id])
+  executionContainerId  String           @default("")
+  status                SubmissionStatus @default(Queued)
+  testCasesPassed       String[]
+  runtime               Float?
+  memoryUsage           Float?
+  errorMessage          String?
+  createdAt             DateTime         @default(now())
+}
