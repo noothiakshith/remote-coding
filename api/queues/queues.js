@@ -1,24 +1,28 @@
 import { Queue } from "bullmq";
 import { createClient } from "redis";
 
-// Redis connection details
-const connection = {
+// Redis connection config
+const redisConfig = {
     username: process.env.USER_NAME || "",
     password: process.env.PASSWORD || "",
-    host: process.env.HOST || "",
+    host: process.env.HOST || "localhost",
     port: Number(process.env.PORT) || 6379
 };
 
-// Node-redis client (you can use this for caching, pub/sub, etc.)
+
 export const redisurl = createClient({
-    url: `redis://${connection.username}:${connection.password}@${connection.host}:${connection.port}`
+    url: `redis://${redisConfig.username}:${redisConfig.password}@${redisConfig.host}:${redisConfig.port}`
 });
 
 await redisurl.connect();
 
-// BullMQ queues (BullMQ creates its own internal ioredis connections)
-export const submissionqueue = new Queue("submissionqueue", {
-    connection,
+export const submissionQueue = new Queue("submissionQueue", {
+    connection: {
+        host: redisConfig.host,
+        port: redisConfig.port,
+        username: redisConfig.username,
+        password: redisConfig.password
+    },
     defaultJobOptions: {
         attempts: 3,
         backoff: {
@@ -28,8 +32,13 @@ export const submissionqueue = new Queue("submissionqueue", {
     }
 });
 
-export const deletionqueue = new Queue("deletionqueue", {
-    connection,
+export const cleanerQueue = new Queue("cleanerQueue", {
+    connection: {
+        host: redisConfig.host,
+        port: redisConfig.port,
+        username: redisConfig.username,
+        password: redisConfig.password
+    },
     defaultJobOptions: {
         attempts: 3,
         backoff: {

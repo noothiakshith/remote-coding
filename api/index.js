@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 
 import authroutes from "./routes/authroutes.js";
-import userroutes from "./routes/userroutes.js";
+import Userroutes from "./routes/userroutes.js";
 
 const app = express();
 
@@ -16,7 +16,7 @@ app.get("/", (req, res) => {
 });
 
 app.use(authroutes);
-app.use(userroutes);
+app.use(Userroutes);
 
 // Server
 app.listen(3000, () => {

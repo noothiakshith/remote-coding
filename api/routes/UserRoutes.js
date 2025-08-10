@@ -1,84 +1,106 @@
 import express from "express";
 import { verifyauth } from "../middlewares/middleware.js";
+import { PrismaClient, SubmissionStatus } from "@prisma/client";
+import { submissionQueue, cleanerQueue } from "../queues/queues.js";
+
 const router = express.Router();
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 
+router.get('/submissions/problem/:problemId', verifyauth, async (req, res) => {
+    const { problemId } = req.params;
+    const userId = req.userId;
 
-
-router.get('/submission/:id',verifyauth,async(req,res,next)=>{
-    const id = req.params.id;
-    const userid = req?.userid
-    console.log(userid)
-    try{
-        const submission = await prisma.submission.findUnique({
-            where:{
-                problemId:parseInt(id),
-                userId:userid
+    try {
+        const submissions = await prisma.submission.findMany({
+            where: {
+                problemId: problemId,
+                userId: userId,
             },
-            include:{
-                problem,
-                status,
-                testcasesPassed,
-                runtime,
-            }
-        })
-        return res.status(200).json(submission)
-    }
-    catch(err){
-        console.log(err);
-        return res.status(401).json(err);
-    }
-})
-
-router.post('/submission/:id',verifyauth,async(req,res,next)=>{
-    const id = req.params.id;
-    const userid = req?.userid
-    const{code,language} = req.body
-    try{
-        const newsubmission = await prisma.submission.create({
-            where:{
-                problemId:parseInt(id),
-                userId:userid,
-                source_code:code,
-                language:language
-            }
-        })
-        return res.status(200).json(newsubmission)
-    }
-    catch(err){
-        console.log(err);
-        return res.status(401).json(err);
-    }
-})
-
-
-
-router.patch('/submission/:id',verifyauth,async(req,res,next)=>{
-    const id = req.params.id;
-    const userid = req?.userid;
-    const{testcasesPassed,stdout,status} = req.body
-    try{
-        if(status==="Successful"){
-            //TODO:move to the cleaner worker
-        }
-        const updatesubmission = await prisma.submission.update({
-            where:{
-                id,
-                userId:userid
+            include: {
+                language: true,
             },
-            data:{
-                testCasesPassed:testcasesPassed,
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
+
+        return res.status(200).json(submissions);
+    } catch (err) {
+        console.error("Error fetching submissions:", err);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+router.post('/submission/problem/:problemId', verifyauth, async (req, res) => {
+    const { problemId } = req.params;
+    const userId = req.userId;
+    const { code, language_id } = req.body;
+
+    if (!code || language_id === undefined) {
+        return res.status(400).json({ error: "Request body must contain 'code' and 'language_id'." });
+    }
+
+    try {
+        const newSubmission = await prisma.submission.create({
+            data: {
+                source_code: code,
+                problem: { connect: { id: problemId } },
+                user: { connect: { id: userId } },
+                language: { connect: { id: parseInt(language_id) } },
+            }
+        });
+
+        await submissionQueue.add("submissionQueue", {
+            submissionId: newSubmission.id,
+        });
+
+        return res.status(201).json(newSubmission);
+    } catch (err) {
+        console.error("Error creating submission:", err);
+        return res.status(500).json({ error: "Failed to create submission. Ensure all IDs are valid." });
+    }
+});
+
+router.patch('/submission/:submissionId', async (req, res) => {
+    const { submissionId } = req.params;
+    const { testCasesPassed, stdout, status, runtime, memoryUsage, errorMessage } = req.body;
+
+    if (!Object.values(SubmissionStatus).includes(status)) {
+        return res.status(400).json({ error: "Invalid status value provided." });
+    }
+    
+    try {
+        const updatedSubmission = await prisma.submission.update({
+            where: { id: submissionId },
+            data: {
+                testCasesPassed,
                 stdout,
-                status
+                status,
+                runtime,
+                memoryUsage,
+                errorMessage
             }
-        })
+        });
+        
+        if (status === SubmissionStatus.Successful || status === SubmissionStatus.Error) {
+            await cleanerQueue.add(
+                "delete-submission-pod",
+                { podName: submissionId },
+                {
+                    delay: 5000,         
+                    attempts: 3,       
+                    backoff: { type: "exponential", delay: 2000 },
+                    removeOnComplete: false, 
+                    removeOnFail: false
+                }
+            );
+        }
+        
+        return res.status(200).json(updatedSubmission);
+    } catch (err) {
+        console.error(`Error updating submission ${submissionId}:`, err);
+        return res.status(500).json({ error: "Internal Server Error" });
     }
-    catch(err){
-        console.log(err);
-        return res.status(401).json(err);
-    }
-})
+});
 
-
-export default router
+export default router;
