@@ -1,0 +1,23 @@
+{
+  "name": "worker",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@kubernetes/client-node": "^0.21.0",
+    "@prisma/client": "^6.13.0",
+    "bullmq": "^5.56.9",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "redis": "^5.8.0"
+  },
+  "devDependencies": {
+    "prisma": "^6.13.0"
+  }
+}
