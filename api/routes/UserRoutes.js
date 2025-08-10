@@ -44,10 +44,10 @@ router.post('/submission/problem/:problemId', verifyauth, async (req, res) => {
         const newSubmission = await prisma.submission.create({
             data: {
                 source_code: code,
-                problem: { connect: { id: problemId } },
                 user: { connect: { id: userId } },
-                language: { connect: { id: parseInt(language_id) } },
-            }
+                problem: { connect: { id: problemId } },
+                language: { connect: { id: parseInt(language_id) } }
+              }
         });
 
         await submissionQueue.add("submissionQueue", {

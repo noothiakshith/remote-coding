@@ -7,6 +7,9 @@ import jwt from "jsonwebtoken";
 const router = express.Router();
 const prisma = new PrismaClient();
 
+// ✅ Local JWT secret (no .env needed for now)
+const JWT_SECRET = "supersecretkey123"; // change to a strong, random value
+
 // Zod schemas
 const loginSchema = z.object({
     email: z.string().email().trim().toLowerCase(),
@@ -45,13 +48,9 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ message: "Incorrect password" });
         }
 
-        if (!process.env.JWT) {
-            throw new Error("JWT secret is not defined in environment variables");
-        }
-
         const token = jwt.sign(
             { userId: user.id },
-            process.env.JWT,
+            JWT_SECRET,
             { expiresIn: '1h' }
         );
 
