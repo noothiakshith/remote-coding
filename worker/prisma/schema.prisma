@@ -1,12 +1,5 @@
-// This is your Prisma schema file,
-// Learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  // binaryTargets = ["native", "linux-musl"]
 }
 
 datasource db {
@@ -15,19 +8,13 @@ datasource db {
 }
 
 model Language {
-  id              Int           @id
-  name            String
-  extension       String
-  Submission      Submission[]
-  compileCommand  String        @default("")
+  id               Int          @id
+  name             String
+  extension        String
+  compileCommand   String       @default("")
   executionCommand String       @default("")
-  testCommand     String        @default("")
-}
-
-enum SubmissionStatus {
-  Queued
-  Successful
-  Error
+  testCommand      String       @default("")
+  Submission       Submission[]
 }
 
 model User {
@@ -37,7 +24,7 @@ model User {
   password    String
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
-  submissions Submission[] // One-to-many relation with Submission
+  submissions Submission[]
 }
 
 model Problem {
@@ -47,26 +34,32 @@ model Problem {
   difficulty  String
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
-  submissions Submission[] // One-to-many relation with Submission
+  submissions Submission[]
 }
 
 model Submission {
-  id                    String           @id @default(uuid())
-  problemId             String
-  problem               Problem          @relation(fields: [problemId], references: [id])
-  source_code           String
-  mainFuncName          String           @default("main")
-  stdin                 String[]         @default([""])
-  stdout                String           @default("")
-  language_id           Int
-  language              Language         @relation(fields: [language_id], references: [id])
-  userId                String
-  user                  User             @relation(fields: [userId], references: [id])
-  executionContainerId  String           @default("")
-  status                SubmissionStatus @default(Queued)
-  testCasesPassed       String[]
-  runtime               Float?
-  memoryUsage           Float?
-  errorMessage          String?
-  createdAt             DateTime         @default(now())
+  id                   String           @id @default(uuid())
+  problemId            String
+  source_code          String
+  mainFuncName         String           @default("main")
+  stdin                String[]         @default([""])
+  stdout               String           @default("")
+  language_id          Int
+  userId               String
+  executionContainerId String           @default("")
+  status               SubmissionStatus @default(Queued)
+  testCasesPassed      String[]
+  runtime              Float?
+  memoryUsage          Float?
+  errorMessage         String?
+  createdAt            DateTime         @default(now())
+  language             Language         @relation(fields: [language_id], references: [id])
+  problem              Problem          @relation(fields: [problemId], references: [id])
+  user                 User             @relation(fields: [userId], references: [id])
+}
+
+enum SubmissionStatus {
+  Queued
+  Successful
+  Error
 }
