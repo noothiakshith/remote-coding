@@ -31,6 +31,31 @@ router.get('/submissions/problem/:problemId', verifyauth, async (req, res) => {
     }
 });
 
+router.get('/submission/:submissionId', async (req, res) => {
+    const { submissionId } = req.params;
+
+    try {
+        const submission = await prisma.submission.findUnique({
+            where: { id: submissionId },
+            include: { language: true }
+        });
+
+        if (!submission) {
+            return res.status(404).json({ error: "Submission not found" });
+        }
+
+        res.json({
+            source_code: submission.source_code,
+            language: submission.language.name,
+            mainFuncName: "two_sum" // Changed from "main" to "two_sum"
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+
 router.post('/submission/problem/:problemId', verifyauth, async (req, res) => {
     const { problemId } = req.params;
     const userId = req.userId;

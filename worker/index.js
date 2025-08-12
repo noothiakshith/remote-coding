@@ -2,8 +2,6 @@
 import { Worker } from 'bullmq';
 import { KubeConfig, CoreV1Api, loadYaml } from '@kubernetes/client-node';
 import { PrismaClient, SubmissionStatus } from '@prisma/client';
-
-
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { readFileSync } from 'fs';
@@ -19,7 +17,7 @@ const K8S_NAMESPACE = 'isolated-execution-env';
 const prisma = new PrismaClient();
 
 const redisConnection = {
-    host: process.env.REDIS_HOST || 'localhost',
+    host: process.env.REDIS_HOST || 'redis',
     port: parseInt(process.env.REDIS_PORT || '6379'),
     password: process.env.REDIS_PASSWORD || undefined,
 };
@@ -77,14 +75,12 @@ async function submissionJobProcessor(job) {
         throw new Error("One or more required environment variables are not set for the worker.");
     }
 
-
     const languageImageName = `${CONTAINER_REG_BASE_URL}/${IMAGE_BASE_NAME}-${submission.language.extension}:${IMAGE_TAG}`;
-
 
     const podManifestString = podTemplate
         .replace(/submission-id/g, submission.id)
         .replace(/language-image/g, languageImageName)
-        .replace(/callback-url/g, `${API_URL}/api/submission/${submission.id}`)
+        .replace(/callback-url/g, API_URL)  // Use base API_URL
         .replace(/problem-id/g, submission.problemId)
         .replace(/testcases-git/g, TESTCASES_GIT);
 
